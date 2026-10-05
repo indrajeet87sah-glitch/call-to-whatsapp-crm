@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Call-to-WhatsApp Auto-CRM</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen p-6">
+    <div class="max-w-5xl mx-auto">
+        <!-- Header -->
+        <div class="flex items-center justify-between border-b border-slate-700 pb-4 mb-6">
+            <div>
+                <h1 class="text-2xl font-bold text-emerald-400">📞 Smart Call-to-WhatsApp Auto-CRM</h1>
+                <p class="text-sm text-slate-400">Official Meta Cloud API Webhook & Automated Follow-up Engine</p>
+            </div>
+            <span class="bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-3 py-1 rounded-full text-xs font-semibold">
+                ● Meta Cloud API Connected
+            </span>
+        </div>
+
+        <!-- Stats Cards -->
+        <div class="grid grid-cols-3 gap-4 mb-6">
+            <div class="bg-slate-800 p-4 rounded-xl border border-slate-700">
+                <p class="text-slate-400 text-sm">Total Calls Handled</p>
+                <h2 id="totalCalls" class="text-3xl font-bold mt-1">0</h2>
+            </div>
+            <div class="bg-slate-800 p-4 rounded-xl border border-slate-700">
+                <p class="text-slate-400 text-sm">WhatsApp Auto-Sent</p>
+                <h2 id="sentCount" class="text-3xl font-bold text-emerald-400 mt-1">0</h2>
+            </div>
+            <div class="bg-slate-800 p-4 rounded-xl border border-slate-700">
+                <p class="text-slate-400 text-sm">Failed Triggers</p>
+                <h2 id="failedCount" class="text-3xl font-bold text-rose-400 mt-1">0</h2>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <!-- Call Simulator Panel -->
+            <div class="bg-slate-800 p-5 rounded-xl border border-slate-700">
+                <h3 class="font-semibold text-lg mb-4 text-emerald-300">⚡ Simulate Incoming Call</h3>
+                <div class="space-y-4">
+                    <div>
+                        <label class="text-xs text-slate-400">Caller WhatsApp Number</label>
+                        <input id="number" type="text" value="7890330625" class="w-full mt-1 bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-emerald-500">
+                    </div>
+                    <div>
+                        <label class="text-xs text-slate-400">Call Status</label>
+                        <select id="callType" class="w-full mt-1 bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm">
+                            <option value="Missed Call 🔴">Missed Call 🔴</option>
+                            <option value="Call Completed 🟢">Call Completed 🟢</option>
+                            <option value="Line Busy 🟡">Line Busy 🟡</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="text-xs text-slate-400">Message Type</label>
+                        <textarea id="customMessage" rows="3" class="w-full mt-1 bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm" placeholder="Leave blank for Template, or type custom message...">Namaste! 🙏 Thank you for calling us. Hum abhi aapki call attend nahi kar paaye. Kripya apna sawal yahan likhein!</textarea>
+                        <p class="text-[11px] text-slate-400 mt-1">💡 Tip: Reply once to the test number on WhatsApp so custom text messages are unlocked for 24h!</p>
+                    </div>
+                    <button onclick="triggerCall()" id="sendBtn" class="w-full bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold py-2.5 rounded-lg transition">
+                        📲 End Call & Send WhatsApp
+                    </button>
+                    <p id="statusMsg" class="text-xs text-center"></p>
+                </div>
+            </div>
+
+            <!-- Live Call Logs Table -->
+            <div class="md:col-span-2 bg-slate-800 p-5 rounded-xl border border-slate-700">
+                <h3 class="font-semibold text-lg mb-4">📊 Live Auto-Responder Logs</h3>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-sm">
+                        <thead class="text-xs text-slate-400 border-b border-slate-700">
+                            <tr>
+                                <th class="pb-2">Time</th>
+                                <th class="pb-2">Caller</th>
+                                <th class="pb-2">Call Event</th>
+                                <th class="pb-2">Message</th>
+                                <th class="pb-2">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="logsTable" class="divide-y divide-slate-700/60">
+                            <tr><td colspan="5" class="py-6 text-center text-slate-500">No calls recorded yet. Simulate a call on the left!</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        async function loadLogs() {
+            const res = await fetch('/api/logs');
+            const data = await res.json();
+            document.getElementById('totalCalls').innerText = data.totalCalls;
+            document.getElementById('sentCount').innerText = data.sentCount;
+            document.getElementById('failedCount').innerText = data.failedCount;
+
+            const tbody = document.getElementById('logsTable');
+            if (data.logs.length === 0) return;
+            tbody.innerHTML = data.logs.map(log => `
+                <tr>
+                    <td class="py-3 text-xs text-slate-400">${log.timestamp}</td>
+                    <td class="py-3 font-mono">${log.callerNumber}</td>
+                    <td class="py-3 text-xs">${log.callType}</td>
+                    <td class="py-3 text-xs text-slate-300 max-w-xs truncate">${log.messageSent}</td>
+                    <td class="py-3">
+                        <span class="px-2 py-0.5 rounded text-xs font-medium ${log.status === 'Sent' ? 'bg-emerald-500/20 text-emerald-300' : 'bg-rose-500/20 text-rose-300'}">
+                            ${log.status}
+                        </span>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        async function triggerCall() {
+            const btn = document.getElementById('sendBtn');
+            const statusMsg = document.getElementById('statusMsg');
+            btn.disabled = true;
+            btn.innerText = "Sending WhatsApp...";
+
+            const payload = {
+                number: document.getElementById('number').value,
+                callType: document.getElementById('callType').value,
+                customMessage: document.getElementById('customMessage').value.trim(),
+                secret: "my_super_secret_123"
+            };
+
+            const res = await fetch('/api/call-ended', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const result = await res.json();
+
+            if (result.success) {
+                statusMsg.innerText = "✅ WhatsApp Auto-Reply Sent!";
+                statusMsg.className = "text-xs text-center text-emerald-400";
+            } else {
+                statusMsg.innerText = "❌ Error: " + result.error;
+                statusMsg.className = "text-xs text-center text-rose-400";
+            }
+
+            btn.disabled = false;
+            btn.innerText = "📲 End Call & Send WhatsApp";
+            loadLogs();
+        }
+
+        loadLogs();
+    </script>
+</body>
+</html>
